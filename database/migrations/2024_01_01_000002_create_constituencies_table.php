@@ -12,10 +12,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('county_id')->constrained()->cascadeOnDelete();
             $table->string('name');
-            $table->string('code', 10)->unique();
             $table->timestamps();
             
             $table->index('county_id');
+            $table->unique(['county_id', 'name']);
         });
     }
 
@@ -24,4 +24,3 @@ return new class extends Migration
         Schema::dropIfExists('constituencies');
     }
 };
-

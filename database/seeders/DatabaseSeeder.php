@@ -14,11 +14,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->command->info('');
+        $this->command->newLine();
         $this->command->info('╔══════════════════════════════════════════════════════╗');
         $this->command->info('║           🌱 PARTY APP DATABASE SEEDER 🌱            ║');
         $this->command->info('╚══════════════════════════════════════════════════════╝');
-        $this->command->info('');
+        $this->command->newLine();
 
         $this->call([
             // 1. Geographic data (counties, constituencies, wards)
@@ -46,11 +46,11 @@ class DatabaseSeeder extends Seeder
             FlagSeeder::class,
         ]);
 
-        $this->command->info('');
+        $this->command->newLine();
         $this->command->info('╔══════════════════════════════════════════════════════╗');
         $this->command->info('║         ✅ DATABASE SEEDING COMPLETE! ✅             ║');
         $this->command->info('╚══════════════════════════════════════════════════════╝');
-        $this->command->info('');
+        $this->command->newLine();
         
         $this->displaySummary();
     }
@@ -61,7 +61,7 @@ class DatabaseSeeder extends Seeder
     private function displaySummary(): void
     {
         $this->command->info('📊 SEEDING SUMMARY:');
-        $this->command->info('');
+        $this->command->newLine();
         
         $this->command->table(
             ['Model', 'Count'],
@@ -79,6 +79,6 @@ class DatabaseSeeder extends Seeder
             ]
         );
         
-        $this->command->info('');
+        $this->command->newLine();
     }
 }

@@ -13,6 +13,8 @@ class AdminUserSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->command->info('🔐 Seeding admin users...');
+
         // Create default super admin
         AdminUser::firstOrCreate(
             ['email' => 'admin@party.com'],
@@ -56,8 +58,8 @@ class AdminUserSeeder extends Seeder
             ]
         );
 
+        $this->command->info('   ✓ Created ' . AdminUser::count() . ' admin users');
         $this->command->newLine();
-        $this->command->info('🔐 Admin users seeded successfully!');
         $this->command->warn('⚠️  Please change the default passwords in production!');
         $this->command->newLine();
         $this->command->table(

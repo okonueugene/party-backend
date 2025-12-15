@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class County extends Model
 {
@@ -24,6 +25,14 @@ class County extends Model
     }
 
     /**
+     * Get all wards for the county through constituencies.
+     */
+    public function wards(): HasManyThrough
+    {
+        return $this->hasManyThrough(Ward::class, Constituency::class);
+    }
+
+    /**
      * Get the users in this county.
      */
     public function users(): HasMany
@@ -39,4 +48,3 @@ class County extends Model
         return $this->hasMany(Post::class);
     }
 }
-

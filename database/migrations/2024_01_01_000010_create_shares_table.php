@@ -8,19 +8,20 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('likes', function (Blueprint $table) {
+        Schema::create('shares', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->morphs('likeable'); // Creates likeable_id and likeable_type
+            $table->foreignId('post_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
             
-            $table->unique(['user_id', 'likeable_id', 'likeable_type']);
+            $table->unique(['user_id', 'post_id']);
             $table->index('created_at');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('likes');
+        Schema::dropIfExists('shares');
     }
 };
+

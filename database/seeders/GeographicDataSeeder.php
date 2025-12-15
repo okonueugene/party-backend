@@ -31,7 +31,6 @@ class GeographicDataSeeder extends Seeder
         } catch (\Exception $e) {
             DB::rollBack();
             $this->command->error('❌ Seeding failed: ' . $e->getMessage());
-            $this->command->error('Stack trace: ' . $e->getTraceAsString());
             throw $e;
         }
     }
@@ -133,7 +132,6 @@ class GeographicDataSeeder extends Seeder
                 $constituency = Constituency::create([
                     'county_id' => $county->id,
                     'name' => $constituencyName,
-                    'code' => $this->generateConstituencyCode($county->code, $constituencyCount),
                 ]);
                 
                 $constituencyCount++;
@@ -153,7 +151,6 @@ class GeographicDataSeeder extends Seeder
                     Ward::create([
                         'constituency_id' => $constituency->id,
                         'name' => $wardName,
-                        'code' => $this->generateWardCode($constituency->code, $wardCount),
                     ]);
                     
                     $wardCount++;
@@ -184,40 +181,26 @@ class GeographicDataSeeder extends Seeder
     }
     
     /**
-     * Generate constituency code
-     */
-    private function generateConstituencyCode(string $countyCode, int $index): string
-    {
-        return $countyCode . '-' . str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT);
-    }
-    
-    /**
-     * Generate ward code
-     */
-    private function generateWardCode(string $constituencyCode, int $index): string
-    {
-        return $constituencyCode . '-' . str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT);
-    }
-    
-    /**
      * Display seeding summary
      */
     private function displaySummary(): void
     {
         $this->command->newLine();
         $this->command->info('========================================');
-        $this->command->info('       📊 SEEDING SUMMARY');
+        $this->command->info('       📊 GEOGRAPHIC DATA SUMMARY');
         $this->command->info('========================================');
         $this->command->newLine();
         
-        foreach (County::withCount(['constituencies', 'wards'])->get() as $county) {
+        foreach (County::with('constituencies.wards')->get() as $county) {
+            $wardCount = $county->constituencies->sum(fn($c) => $c->wards->count());
+            
             $this->command->info("📍 {$county->name} (Code: {$county->code})");
-            $this->command->info("   ├─ Constituencies: {$county->constituencies_count}");
-            $this->command->info("   └─ Wards: {$county->wards_count}");
+            $this->command->info("   ├─ Constituencies: {$county->constituencies->count()}");
+            $this->command->info("   └─ Wards: {$wardCount}");
             
             // Show constituencies
-            foreach ($county->constituencies()->withCount('wards')->get() as $constituency) {
-                $this->command->info("      ├─ {$constituency->name} ({$constituency->wards_count} wards)");
+            foreach ($county->constituencies as $constituency) {
+                $this->command->info("      ├─ {$constituency->name} ({$constituency->wards->count()} wards)");
             }
             
             $this->command->newLine();
@@ -229,6 +212,6 @@ class GeographicDataSeeder extends Seeder
         $this->command->info('✅ Total Wards: ' . Ward::count());
         $this->command->info('========================================');
         $this->command->newLine();
-        $this->command->info('🎉 Seeding completed successfully!');
+        $this->command->info('🎉 Geographic data seeded successfully!');
     }
 }

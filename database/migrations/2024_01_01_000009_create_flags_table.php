@@ -10,17 +10,16 @@ return new class extends Migration
     {
         Schema::create('flags', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('post_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->morphs('flaggable'); // Creates flaggable_id and flaggable_type
             $table->string('reason');
             $table->text('description')->nullable();
-            $table->enum('status', ['pending', 'reviewed', 'action_taken'])->default('pending');
-            $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->enum('status', ['pending', 'resolved', 'dismissed', 'escalated'])->default('pending');
+            $table->foreignId('reviewed_by')->nullable()->constrained('admin_users')->nullOnDelete();
             $table->timestamp('reviewed_at')->nullable();
             $table->timestamps();
             
             $table->index(['status', 'created_at']);
-            $table->index('post_id');
             $table->index('reviewed_by');
         });
     }
@@ -30,4 +29,3 @@ return new class extends Migration
         Schema::dropIfExists('flags');
     }
 };
-

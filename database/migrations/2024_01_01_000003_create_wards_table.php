@@ -12,10 +12,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('constituency_id')->constrained()->cascadeOnDelete();
             $table->string('name');
-            $table->string('code', 10)->unique();
             $table->timestamps();
             
             $table->index('constituency_id');
+            $table->unique(['constituency_id', 'name']);
         });
     }
 
@@ -24,4 +24,3 @@ return new class extends Migration
         Schema::dropIfExists('wards');
     }
 };
-

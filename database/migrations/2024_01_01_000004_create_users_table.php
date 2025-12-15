@@ -13,20 +13,27 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('phone_number', 20)->unique();
             $table->string('name');
+            $table->string('phone', 20)->unique();
+            $table->string('email')->nullable()->unique();
+            $table->string('password')->nullable();
+            $table->string('otp', 10)->nullable();
+            $table->timestamp('otp_expires_at')->nullable();
+            $table->foreignId('county_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('constituency_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('ward_id')->nullable()->constrained()->nullOnDelete();
-            $table->boolean('is_admin')->default(false);
-            $table->boolean('is_suspended')->default(false);
-            $table->timestamp('suspended_until')->nullable();
+            $table->string('profile_image')->nullable();
+            $table->text('bio')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamp('phone_verified_at')->nullable();
             $table->timestamp('email_verified_at')->nullable();
-            $table->string('password')->nullable(); // For admin login if needed
             $table->rememberToken();
             $table->timestamps();
-            $table->softDeletes();
             
+            $table->index(['county_id', 'created_at']);
+            $table->index(['constituency_id', 'created_at']);
             $table->index(['ward_id', 'created_at']);
-            $table->index('is_suspended');
+            $table->index('is_active');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
@@ -41,8 +48,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
         Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('users');
     }
 };
-
