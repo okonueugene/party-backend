@@ -16,7 +16,6 @@ class GeographicDataSeeder extends Seeder
     {
         $this->command->warn('🚀 Starting geographic data seeding from GitHub...');
         
-        DB::beginTransaction();
         
         try {
             $this->clearExistingData();
@@ -24,7 +23,6 @@ class GeographicDataSeeder extends Seeder
             $data = $this->fetchFromGitHub();
             $this->seedData($data);
             
-            DB::commit();
             
             $this->displaySummary();
             

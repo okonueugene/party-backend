@@ -58,6 +58,9 @@ class AdminUserSeeder extends Seeder
             ]
         );
 
+        //Run factory to create additional admin users
+        AdminUser::factory(10)->create();
+
         $this->command->info('   ✓ Created ' . AdminUser::count() . ' admin users');
         $this->command->newLine();
         $this->command->warn('⚠️  Please change the default passwords in production!');

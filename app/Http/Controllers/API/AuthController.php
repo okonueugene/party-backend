@@ -13,167 +13,211 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    protected SmsService $smsService;
     protected OtpService $otpService;
-
-    public function __construct(OtpService $otpService)
+    
+    public function __construct(SmsService $smsService, OtpService $otpService)
     {
+        $this->smsService = $smsService;
         $this->otpService = $otpService;
     }
-
+    
     /**
-     * Register a new user.
+     * Request OTP
      */
-    public function register(RegisterRequest $request)
+    public function requestOtp(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'phone_number' => 'required|string|regex:/^(\+?254|0)?[17]\d{8}$/',
+        ]);
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid phone number format',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+        
+        $phoneNumber = $request->phone_number;
+        
         // Format phone number
-        $phone = $this->formatPhone($request->phone);
-
-        // Create user
-        $user = User::create([
-            'name' => $request->name,
-            'phone' => $phone,
-            'county_id' => $request->county_id,
-            'constituency_id' => $request->constituency_id,
-            'ward_id' => $request->ward_id,
-        ]);
-
-        // Generate and send OTP
-        $otpResult = $this->otpService->generateAndSendOtp($user);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Registration successful. Please verify your phone number with the OTP sent.',
-            'data' => [
-                'user_id' => $user->id,
-                'phone' => $user->phone,
-                'otp_sent' => $otpResult['sms_sent'],
-            ],
-        ], 201);
-    }
-
-    /**
-     * Login user (request OTP).
-     */
-    public function login(LoginRequest $request)
-    {
-        $phone = $this->formatPhone($request->phone);
-
-        $user = User::where('phone', $phone)->first();
-
-        if (!$user) {
+        $formattedPhone = $this->formatPhoneNumber($phoneNumber);
+        
+        // Validate phone number
+        if (!$this->smsService->validatePhoneNumber($formattedPhone)) {
             return response()->json([
                 'success' => false,
-                'message' => 'User not found. Please register first.',
-            ], 404);
+                'message' => 'Invalid Kenyan phone number',
+            ], 422);
         }
-
-        if (!$user->is_active) {
+        
+        // Check if recent OTP exists (rate limiting)
+        if ($this->otpService->exists($formattedPhone)) {
+            $remainingTime = $this->otpService->getRemainingTime($formattedPhone);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Your account has been deactivated.',
-            ], 403);
+                'message' => "Please wait {$remainingTime} seconds before requesting a new OTP",
+            ], 429);
         }
-
-        // Generate and send OTP
-        $otpResult = $this->otpService->generateAndSendOtp($user);
-
+        
+        // Generate OTP
+        $code = $this->otpService->generate($formattedPhone);
+        
+        // Send SMS
+        $sent = $this->smsService->sendOtp($formattedPhone, $code);
+        
+        if ($sent) {
+            return response()->json([
+                'success' => true,
+                'message' => 'OTP sent successfully',
+                'phone_number' => $formattedPhone,
+            ], 200);
+        }
+        
         return response()->json([
-            'success' => true,
-            'message' => 'OTP sent to your phone number.',
-            'data' => [
-                'user_id' => $user->id,
-                'otp_sent' => $otpResult['sms_sent'],
-            ],
-        ]);
+            'success' => false,
+            'message' => 'Failed to send OTP. Please try again.',
+        ], 500);
     }
-
+    
     /**
-     * Verify OTP and return token.
+     * Verify OTP and login/register
      */
     public function verifyOtp(Request $request)
     {
-        $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-            'otp' => ['required', 'string', 'size:6'],
+        $validator = Validator::make($request->all(), [
+            'phone_number' => 'required|string',
+            'code' => 'required|string|size:6',
         ]);
-
-        $user = User::findOrFail($request->user_id);
-
-        $result = $this->otpService->verifyOtp($user, $request->otp);
-
-        if (!$result['success']) {
+        
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => $result['message'],
-            ], 400);
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
         }
-
-        // Create token
-        $token = $user->createToken('auth-token')->plainTextToken;
-
+        
+        $phoneNumber = $this->formatPhoneNumber($request->phone_number);
+        
+        // Verify OTP
+        if (!$this->otpService->verify($phoneNumber, $request->code)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired OTP',
+            ], 401);
+        }
+        
+        // Find or create user
+        $user = User::firstOrCreate(
+            ['phone_number' => $phoneNumber],
+            ['name' => 'User'] // Will be updated during registration
+        );
+        
+        // Check if user is suspended
+        if ($user->is_suspended) {
+            if ($user->suspended_until && $user->suspended_until->isFuture()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your account is suspended until ' . $user->suspended_until->format('Y-m-d H:i'),
+                ], 403);
+            } else {
+                // Suspension expired, reactivate
+                $user->update([
+                    'is_suspended' => false,
+                    'suspended_until' => null,
+                ]);
+            }
+        }
+        
+        // Generate token
+        $token = $user->createToken('mobile-app')->plainTextToken;
+        
+        $isNewUser = $user->wasRecentlyCreated || !$user->ward_id;
+        
         return response()->json([
             'success' => true,
-            'message' => 'OTP verified successfully.',
-            'data' => [
-                'user' => $user->load(['county', 'constituency', 'ward']),
-                'token' => $token,
-            ],
-        ]);
+            'token' => $token,
+            'user' => $user->load('ward.constituency.county'),
+            'is_new_user' => $isNewUser,
+        ], 200);
     }
-
+    
     /**
-     * Resend OTP.
+     * Complete registration (for new users)
      */
-    public function resendOtp(Request $request)
+    public function register(Request $request)
     {
-        $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'ward_id' => 'required|exists:wards,id',
         ]);
-
-        $user = User::findOrFail($request->user_id);
-
-        $result = $this->otpService->resendOtp($user);
-
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+        
+        $user = $request->user();
+        
+        $user->update([
+            'name' => $request->name,
+            'ward_id' => $request->ward_id,
+        ]);
+        
         return response()->json([
             'success' => true,
-            'message' => 'OTP resent successfully.',
-            'data' => [
-                'otp_sent' => $result['sms_sent'],
-            ],
-        ]);
+            'message' => 'Registration completed successfully',
+            'user' => $user->load('ward.constituency.county'),
+        ], 200);
     }
-
+    
     /**
-     * Logout user (revoke token).
+     * Logout
      */
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-
+        
         return response()->json([
             'success' => true,
-            'message' => 'Logged out successfully.',
-        ]);
+            'message' => 'Logged out successfully',
+        ], 200);
     }
-
+    
     /**
-     * Format phone number to standard format.
+     * Get current user
      */
-    protected function formatPhone(string $phone): string
+    public function me(Request $request)
     {
-        // Remove any non-numeric characters
+        return response()->json([
+            'success' => true,
+            'user' => $request->user()->load('ward.constituency.county'),
+        ], 200);
+    }
+    
+    /**
+     * Format phone number helper
+     */
+    private function formatPhoneNumber(string $phone): string
+    {
         $phone = preg_replace('/[^0-9]/', '', $phone);
-
-        // If it doesn't start with country code, add 254 for Kenya
-        if (!str_starts_with($phone, '254')) {
-            // Remove leading 0 if present
-            if (str_starts_with($phone, '0')) {
-                $phone = substr($phone, 1);
-            }
-            $phone = '254' . $phone;
+        $phone = ltrim($phone, '+');
+        
+        if (str_starts_with($phone, '254')) {
+            return $phone;
+        } elseif (str_starts_with($phone, '0')) {
+            return '254' . substr($phone, 1);
+        } elseif (str_starts_with($phone, '7') || str_starts_with($phone, '1')) {
+            return '254' . $phone;
         }
-
-        return $phone;
+        
+        return '254' . $phone;
     }
 }
 

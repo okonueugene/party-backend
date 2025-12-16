@@ -95,3 +95,32 @@ After running migrations, you'll need to:
 - All foreign key constraints are properly ordered
 - All indexes are in place for performance
 
+Step 6: Create Cleanup Command for Expired OTPs
+app/Console/Commands/CleanupExpiredOtps.php
+php<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use App\Services\OtpService;
+
+class CleanupExpiredOtps extends Command
+{
+    protected $signature = 'otp:cleanup';
+    protected $description = 'Clean up expired OTP codes';
+
+    public function handle(OtpService $otpService)
+    {
+        $deleted = $otpService->cleanup();
+        
+        $this->info("Cleaned up {$deleted} expired OTP codes");
+        
+        return 0;
+    }
+}
+Register in app/Console/Kernel.php:
+phpprotected function schedule(Schedule $schedule)
+{
+    // Clean up expired OTPs every hour
+    $schedule->command('otp:cleanup')->hourly();
+}

@@ -35,10 +35,11 @@ return [
         ],
     ],
 
-    'host_pinnacle' => [
-        'url' => env('HOST_PINNACLE_API_URL', 'https://api.hostpinnacle.com/sms'),
-        'api_key' => env('HOST_PINNACLE_API_KEY'),
-        'sender_id' => env('HOST_PINNACLE_SENDER_ID', 'PARTY'),
+    'hostpinnacle_sms' => [
+        'url' => env('HOSTPINNACLE_SMS_URL', 'https://smsportal.hostpinnacle.co.ke/SMSApi/send'),
+        'api_key' => env('HOSTPINNACLE_API_KEY'),
+        'user_id' => env('HOSTPINNACLE_USER_ID'),
+        'password' => env('HOSTPINNACLE_PASSWORD'),
+        'sender_id' => env('HOSTPINNACLE_SENDER_ID', 'PARTY'),
     ],
-
 ];

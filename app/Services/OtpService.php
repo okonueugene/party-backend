@@ -8,107 +8,95 @@ use Illuminate\Support\Facades\Log;
 
 class OtpService
 {
-    protected HostPinnacleSmsService $smsService;
-
-    public function __construct(HostPinnacleSmsService $smsService)
-    {
-        $this->smsService = $smsService;
-    }
-
     /**
-     * Generate and send OTP to user.
+     * Generate OTP code
      *
-     * @param User $user
-     * @return array
+     * @param string $phoneNumber
+     * @return string
      */
-    public function generateAndSendOtp(User $user): array
+    public function generate(string $phoneNumber): string
     {
-        // Generate 6-digit OTP
-        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-
-        // Set expiration time (5 minutes from now)
-        $expiresAt = Carbon::now()->addMinutes(5);
-
-        // Update user with OTP
-        $user->update([
-            'otp' => $otp,
-            'otp_expires_at' => $expiresAt,
+        // Delete old OTPs for this number
+        OtpCode::where('phone_number', $phoneNumber)->delete();
+        
+        // Generate 6-digit code
+        $code = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        
+        // Store in database
+        OtpCode::create([
+            'phone_number' => $phoneNumber,
+            'code' => $code,
+            'expires_at' => Carbon::now()->addMinutes(10),
         ]);
-
-        // Send OTP via SMS
-        $message = "Your verification code is: {$otp}. Valid for 5 minutes.";
-        $smsResult = $this->smsService->sendSms($user->phone, $message);
-
-        if (!$smsResult['success']) {
-            Log::warning('OTP generated but SMS failed to send', [
-                'user_id' => $user->id,
-                'phone' => $user->phone,
-            ]);
-        }
-
-        return [
-            'success' => true,
-            'otp' => $otp, // In production, you might want to hide this
-            'expires_at' => $expiresAt,
-            'sms_sent' => $smsResult['success'],
-        ];
+        
+        return $code;
     }
-
+    
     /**
-     * Verify OTP for user.
+     * Verify OTP code
      *
-     * @param User $user
-     * @param string $otp
-     * @return array
+     * @param string $phoneNumber
+     * @param string $code
+     * @return bool
      */
-    public function verifyOtp(User $user, string $otp): array
+    public function verify(string $phoneNumber, string $code): bool
     {
-        // Check if OTP exists
-        if (!$user->otp) {
-            return [
-                'success' => false,
-                'message' => 'No OTP found. Please request a new one.',
-            ];
+        $otp = OtpCode::where('phone_number', $phoneNumber)
+                     ->where('code', $code)
+                     ->where('expires_at', '>', now())
+                     ->where('verified', false)
+                     ->first();
+        
+        if ($otp) {
+            $otp->update(['verified' => true]);
+            return true;
         }
-
-        // Check if OTP is expired
-        if ($user->otp_expires_at && Carbon::now()->isAfter($user->otp_expires_at)) {
-            return [
-                'success' => false,
-                'message' => 'OTP has expired. Please request a new one.',
-            ];
-        }
-
-        // Verify OTP
-        if ($user->otp !== $otp) {
-            return [
-                'success' => false,
-                'message' => 'Invalid OTP. Please try again.',
-            ];
-        }
-
-        // OTP is valid - clear it and verify phone
-        $user->update([
-            'otp' => null,
-            'otp_expires_at' => null,
-            'phone_verified_at' => Carbon::now(),
-        ]);
-
-        return [
-            'success' => true,
-            'message' => 'OTP verified successfully.',
-        ];
+        
+        return false;
     }
-
+    
     /**
-     * Resend OTP to user.
+     * Check if OTP exists and is valid
      *
-     * @param User $user
-     * @return array
+     * @param string $phoneNumber
+     * @return bool
      */
-    public function resendOtp(User $user): array
+    public function exists(string $phoneNumber): bool
     {
-        return $this->generateAndSendOtp($user);
+        return OtpCode::where('phone_number', $phoneNumber)
+                     ->where('expires_at', '>', now())
+                     ->where('verified', false)
+                     ->exists();
+    }
+    
+    /**
+     * Get remaining time in seconds for OTP
+     *
+     * @param string $phoneNumber
+     * @return int|null
+     */
+    public function getRemainingTime(string $phoneNumber): ?int
+    {
+        $otp = OtpCode::where('phone_number', $phoneNumber)
+                     ->where('expires_at', '>', now())
+                     ->where('verified', false)
+                     ->first();
+        
+        if ($otp) {
+            return Carbon::now()->diffInSeconds($otp->expires_at);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Clean up expired OTPs
+     *
+     * @return int Number of deleted records
+     */
+    public function cleanup(): int
+    {
+        return OtpCode::where('expires_at', '<', now())->delete();
     }
 }
 
