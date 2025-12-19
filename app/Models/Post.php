@@ -82,5 +82,26 @@ class Post extends Model
     {
         return $this->hasMany(Share::class);
     }
+
+
+    public function county()
+    {
+        return $this->belongsTo(County::class);
+    }
+
+    /**
+     * Get the constituency that owns the post.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function constituency()
+    {
+        return $this->belongsTo(Constituency::class);
+    }
+
+    public function ward()
+    {
+        return $this->belongsTo(Ward::class);
+    }
 }
 

@@ -19,7 +19,7 @@ All migrations have been created according to your specification. The migration 
 ## Key Changes from Previous Structure
 
 1. **Users Table**: Simplified structure
-   - Uses `phone_number` instead of `phone`
+   - Uses `phone_number` instead of `phone_number`
    - Only has `ward_id` (no county_id, constituency_id)
    - Has `is_admin` flag instead of separate admin_users table
    - Has `is_suspended` and `suspended_until` for moderation
@@ -71,7 +71,7 @@ After running migrations, you'll need to:
 
 1. **Update Models** to match the new structure:
    - Remove polymorphic relationships from Like/Flag models
-   - Update User model to use `phone_number` instead of `phone`
+   - Update User model to use `phone_number` instead of `phone_number`
    - Update Post model to use `ward_id` only
    - Remove AdminUser model (use User with is_admin flag)
 
@@ -95,32 +95,3 @@ After running migrations, you'll need to:
 - All foreign key constraints are properly ordered
 - All indexes are in place for performance
 
-Step 6: Create Cleanup Command for Expired OTPs
-app/Console/Commands/CleanupExpiredOtps.php
-php<?php
-
-namespace App\Console\Commands;
-
-use Illuminate\Console\Command;
-use App\Services\OtpService;
-
-class CleanupExpiredOtps extends Command
-{
-    protected $signature = 'otp:cleanup';
-    protected $description = 'Clean up expired OTP codes';
-
-    public function handle(OtpService $otpService)
-    {
-        $deleted = $otpService->cleanup();
-        
-        $this->info("Cleaned up {$deleted} expired OTP codes");
-        
-        return 0;
-    }
-}
-Register in app/Console/Kernel.php:
-phpprotected function schedule(Schedule $schedule)
-{
-    // Clean up expired OTPs every hour
-    $schedule->command('otp:cleanup')->hourly();
-}

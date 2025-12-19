@@ -33,11 +33,10 @@ class UserFactory extends Factory
 
         return [
             'name' => fake()->name(),
-            'phone' => '254' . fake()->unique()->numerify('#########'),
+            'phone_number' => '254' . fake()->unique()->numerify('#########'),
             'email' => fake()->unique()->safeEmail(),
             'password' => static::$password ??= Hash::make('password'),
-            'otp' => null,
-            'otp_expires_at' => null,
+        
             'county_id' => $county?->id,
             'constituency_id' => $constituency?->id,
             'ward_id' => $ward?->id,

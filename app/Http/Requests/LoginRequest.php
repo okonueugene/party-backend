@@ -22,7 +22,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'phone' => ['required', 'string', 'regex:/^(\+254|0)?[17]\d{8}$/'],
+            'phone_number' => ['required', 'string', 'regex:/^(\+254|0)?[17]\d{8}$/'],
         ];
     }
 
@@ -34,7 +34,7 @@ class LoginRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.regex' => 'The phone number must be a valid Kenyan phone number.',
+            'phone_number.regex' => 'The phone_number number must be a valid Kenyan phone_number number.',
         ];
     }
 }

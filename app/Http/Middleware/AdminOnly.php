@@ -5,29 +5,42 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Illuminate\Support\Facades\Auth;
 
 class AdminOnly
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::guard('admin')->check()) {
-            return redirect()->route('admin.login')->with('error', 'Please login to access the admin panel.');
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
         }
 
-        $admin = Auth::guard('admin')->user();
+        if (!$user->is_admin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Admin access required.',
+            ], 403);
+        }
 
-        if (!$admin->is_active) {
-            Auth::guard('admin')->logout();
-            return redirect()->route('admin.login')->with('error', 'Your account has been deactivated.');
+        if ($user->is_suspended) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your admin account has been suspended.',
+            ], 403);
+        }
+
+        // Check token abilities
+        if (!$user->tokenCan('admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid token abilities.',
+            ], 403);
         }
 
         return $next($request);
     }
 }
-

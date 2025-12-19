@@ -39,7 +39,7 @@ class UserSeeder extends Seeder
 
         // Primary test user
         User::firstOrCreate(
-            ['phone' => '254712345678'],
+            ['phone_number' => '254712345678'],
             [
                 'name' => 'John Doe',
                 'email' => 'john@example.com',
@@ -59,7 +59,7 @@ class UserSeeder extends Seeder
         $secondCounty = $secondConstituency?->county;
 
         User::firstOrCreate(
-            ['phone' => '254723456789'],
+            ['phone_number' => '254723456789'],
             [
                 'name' => 'Jane Smith',
                 'email' => 'jane@example.com',
@@ -75,7 +75,7 @@ class UserSeeder extends Seeder
 
         // Unverified user for testing
         User::firstOrCreate(
-            ['phone' => '254734567890'],
+            ['phone_number' => '254734567890'],
             [
                 'name' => 'Test Unverified',
                 'email' => 'unverified@example.com',
@@ -91,7 +91,7 @@ class UserSeeder extends Seeder
 
         $this->command->info('   ✓ Created 3 test users');
         $this->command->table(
-            ['Phone', 'Name', 'Password', 'Status'],
+            ['phone_number', 'Name', 'Password', 'Status'],
             [
                 ['254712345678', 'John Doe', 'password123', 'Verified'],
                 ['254723456789', 'Jane Smith', 'password123', 'Verified'],

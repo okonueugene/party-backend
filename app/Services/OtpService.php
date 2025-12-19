@@ -2,8 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use Carbon\Carbon;
+use App\Models\User;
+use App\Models\OtpCode;
 use Illuminate\Support\Facades\Log;
 
 class OtpService

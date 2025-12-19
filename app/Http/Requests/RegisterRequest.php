@@ -24,11 +24,11 @@ class RegisterRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'phone' => [
+            'phone_number' => [
                 'required',
                 'string',
                 'regex:/^(\+254|0)?[17]\d{8}$/',
-                Rule::unique('users', 'phone'),
+                Rule::unique('users', 'phone_number'),
             ],
             'county_id' => ['required', 'exists:counties,id'],
             'constituency_id' => [
@@ -64,8 +64,8 @@ class RegisterRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.regex' => 'The phone number must be a valid Kenyan phone number.',
-            'phone.unique' => 'This phone number is already registered.',
+            'phone_number.regex' => 'The phone_number number must be a valid Kenyan phone_number number.',
+            'phone_number.unique' => 'This phone_number number is already registered.',
             'county_id.exists' => 'The selected county is invalid.',
             'constituency_id.exists' => 'The selected constituency is invalid.',
             'ward_id.exists' => 'The selected ward is invalid.',

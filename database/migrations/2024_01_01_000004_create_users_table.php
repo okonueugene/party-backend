@@ -6,34 +6,33 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->string('phone_number', 20)->unique();
             $table->string('name');
-            $table->string('phone', 20)->unique();
             $table->string('email')->nullable()->unique();
-            $table->string('password')->nullable();
-            $table->string('otp', 10)->nullable();
-            $table->timestamp('otp_expires_at')->nullable();
+            $table->string('password')->nullable(); // For admin panel only
+            $table->string('password_hash')->nullable();
             $table->foreignId('county_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('constituency_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('ward_id')->nullable()->constrained()->nullOnDelete();
             $table->string('profile_image')->nullable();
             $table->text('bio')->nullable();
+            $table->boolean('is_admin')->default(false);
             $table->boolean('is_active')->default(true);
+            $table->boolean('is_suspended')->default(false);
+            $table->timestamp('suspended_until')->nullable();
             $table->timestamp('phone_verified_at')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
+            $table->softDeletes();
             
-            $table->index(['county_id', 'created_at']);
-            $table->index(['constituency_id', 'created_at']);
             $table->index(['ward_id', 'created_at']);
-            $table->index('is_active');
+            $table->index('is_suspended');
+            $table->index('is_admin');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
@@ -43,9 +42,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('password_reset_tokens');

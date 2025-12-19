@@ -20,34 +20,48 @@ class PostController extends Controller
     /**
      * Get posts feed.
      */
-    public function index(Request $request)
-    {
-        $perPage = $request->get('per_page', 15);
-        $countyId = $request->get('county_id');
-        $constituencyId = $request->get('constituency_id');
-        $wardId = $request->get('ward_id');
+ public function index(Request $request)
+{
+    $perPage = $request->get('per_page', 3);
+    $authenticatedUser = $request->user(); // Get the currently logged-in user
 
-        $query = Post::with(['user.county', 'user.constituency', 'user.ward', 'county', 'constituency', 'ward'])
-            ->where('is_active', true)
-            ->where('is_flagged', false)
-            ->orderBy('created_at', 'desc');
+    // 1. Determine the geographic filter source
+    // Priority: Request Parameter > Authenticated User's Location > Default (Public/All)
+    
+    $wardId         = $request->get('ward_id', $authenticatedUser->ward_id);
+    $constituencyId = $request->get('constituency_id', $authenticatedUser->constituency_id);
+    $countyId       = $request->get('county_id', $authenticatedUser->county_id);
 
-        // Filter by geographic location
-        if ($wardId) {
-            $query->where('ward_id', $wardId);
-        } elseif ($constituencyId) {
-            $query->where('constituency_id', $constituencyId);
-        } elseif ($countyId) {
-            $query->where('county_id', $countyId);
-        }
+    // 2. Build the query
+    $query = Post::with([
+            'user.county', 'user.constituency', 'user.ward', 
+            'county', 'constituency', 'ward'
+        ])
+        ->where('is_active', true)
+        ->where('is_flagged', false)
+        ->orderBy('created_at', 'desc');
 
-        $posts = $query->paginate($perPage);
-
-        return response()->json([
-            'success' => true,
-            'data' => $posts,
-        ]);
+    // 3. Apply Filtering (The most specific filter wins)
+    if ($wardId) {
+        // Highly personalized feed
+        $query->where('ward_id', $wardId);
+    } elseif ($constituencyId) {
+        // Slightly broader feed (e.g., all posts in the user's constituency)
+        $query->where('constituency_id', $constituencyId);
+    } elseif ($countyId) {
+        // Broadest localized feed
+        $query->where('county_id', $countyId);
     }
+    // If none of the above are set (e.g., user hasn't completed registration),
+    // the query runs without location filters, showing a general feed.
+
+    $posts = $query->paginate($perPage);
+
+    return response()->json([
+        'success' => true,
+        'data' => $posts,
+    ]);
+}
 
     /**
      * Create a new post.

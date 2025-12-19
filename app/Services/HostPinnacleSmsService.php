@@ -5,6 +5,8 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+use Exception;
+
 class HostPinnacleSmsService
 {
     protected string $apiUrl;
@@ -32,11 +34,11 @@ class HostPinnacleSmsService
     public function sendSms(string $phoneNumber, string $message): bool
     {
         try {
-            // Format phone number
+            // Format phone_number number
             $formattedPhone = $this->formatPhoneNumber($phoneNumber);
 
             Log::info('Attempting to send SMS', [
-                'phone' => $formattedPhone,
+                'phone_number' => $formattedPhone,
                 'original_phone' => $phoneNumber,
             ]);
 
@@ -63,7 +65,7 @@ class HostPinnacleSmsService
                 $result = $response->json();
                 
                 Log::info('SMS sent successfully', [
-                    'phone' => $formattedPhone,
+                    'phone_number' => $formattedPhone,
                     'response' => $result,
                 ]);
 
@@ -71,7 +73,7 @@ class HostPinnacleSmsService
             }
 
             Log::error('SMS sending failed', [
-                'phone' => $formattedPhone,
+                'phone_number' => $formattedPhone,
                 'status' => $response->status(),
                 'response' => $response->body(),
             ]);
@@ -80,7 +82,7 @@ class HostPinnacleSmsService
 
         } catch (\Exception $e) {
             Log::error('SMS service exception', [
-                'phone' => $phoneNumber,
+                'phone_number' => $phoneNumber,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -114,8 +116,8 @@ class HostPinnacleSmsService
     {
         $results = [];
         
-        foreach ($phoneNumbers as $phone) {
-            $results[$phone] = $this->sendSms($phone, $message);
+        foreach ($phoneNumbers as $phone_number) {
+            $results[$phone_number] = $this->sendSms($phone_number, $message);
         }
         
         return $results;
@@ -178,7 +180,7 @@ class HostPinnacleSmsService
     }
 
     /**
-     * Format phone number to Kenyan format
+     * Format phone_number number to Kenyan format
      *
      * @param string $phoneNumber
      * @return string
@@ -186,29 +188,29 @@ class HostPinnacleSmsService
     protected function formatPhoneNumber(string $phoneNumber): string
     {
         // Remove any non-numeric characters
-        $phone = preg_replace('/[^0-9]/', '', $phoneNumber);
+        $phone_number = preg_replace('/[^0-9]/', '', $phoneNumber);
 
         // Remove leading + if present
-        $phone = ltrim($phone, '+');
+        $phone_number = ltrim($phone_number, '+');
 
         // Handle different formats
-        if (str_starts_with($phone, '254')) {
+        if (str_starts_with($phone_number, '254')) {
             // Already in correct format: 254712345678
-            return $phone;
-        } elseif (str_starts_with($phone, '0')) {
+            return $phone_number;
+        } elseif (str_starts_with($phone_number, '0')) {
             // Format: 0712345678 -> 254712345678
-            return '254' . substr($phone, 1);
-        } elseif (str_starts_with($phone, '7') || str_starts_with($phone, '1')) {
+            return '254' . substr($phone_number, 1);
+        } elseif (str_starts_with($phone_number, '7') || str_starts_with($phone_number, '1')) {
             // Format: 712345678 -> 254712345678
-            return '254' . $phone;
+            return '254' . $phone_number;
         }
 
         // Default: assume it needs 254 prefix
-        return '254' . $phone;
+        return '254' . $phone_number;
     }
 
     /**
-     * Validate Kenyan phone number format
+     * Validate Kenyan phone_number number format
      *
      * @param string $phoneNumber
      * @return bool

@@ -52,7 +52,7 @@ class RateLimiting
         $identifier = $request->ip();
 
         if ($action === 'register' || $action === 'login') {
-            $identifier = $request->input('phone', $request->ip());
+            $identifier = $request->input('phone_number', $request->ip());
         } elseif ($request->user()) {
             $identifier = $request->user()->id;
         }
