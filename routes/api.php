@@ -18,7 +18,8 @@ use App\Http\Controllers\Admin\{
     ModerationController,
     AnalyticsController,
     UserController,
-    PostController as AdminPostController
+    PostController as AdminPostController,
+    AdminUserController
 };
 
 // Middleware
@@ -141,7 +142,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', AdminOnly::class])->group(fu
     });
     
     // Dashboard
-    Route::prefix('dashboard')->group(function () {
+    Route::prefix('dashboard')->middleware('permission:analytics.view')->group(function () {
         Route::get('/', [DashboardController::class, 'index']);
         Route::get('/users', [DashboardController::class, 'userStats']);
         Route::get('/posts', [DashboardController::class, 'postStats']);
@@ -149,13 +150,22 @@ Route::prefix('admin')->middleware(['auth:sanctum', AdminOnly::class])->group(fu
     });
     
     // User Management
-    Route::prefix('users')->group(function () {
+    Route::prefix('users')->middleware('permission:users.view')->group(function () {
         Route::get('/', [UserController::class, 'index']);
         Route::get('/{user}', [UserController::class, 'show']);
         Route::put('/{user}', [UserController::class, 'update']);
         Route::put('/{user}/suspend', [UserController::class, 'suspend']);
         Route::put('/{user}/activate', [UserController::class, 'activate']);
         Route::delete('/{user}', [UserController::class, 'destroy']);
+    });
+
+    // Admin User Management (super admin only)
+    Route::prefix('admins')->middleware('permission:admins.view')->group(function () {
+        Route::get('/', [AdminUserController::class, 'index']);
+        Route::post('/', [AdminUserController::class, 'store'])->middleware('permission:admins.create');
+        Route::put('/{user}', [AdminUserController::class, 'update'])->middleware('permission:admins.edit');
+        Route::delete('/{user}', [AdminUserController::class, 'destroy'])->middleware('permission:admins.delete');
+        Route::get('/roles-permissions', [AdminUserController::class, 'getRolesAndPermissions']);
     });
     
     // Post Management (Admin)
@@ -165,9 +175,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', AdminOnly::class])->group(fu
         Route::delete('/{post}', [AdminPostController::class, 'destroy']);
         Route::post('/{post}/restore', [AdminPostController::class, 'restore']);
     });
+
     
     // Moderation
-    Route::prefix('moderation')->group(function () {
+    Route::prefix('moderation')->middleware('permission:moderation.view')->group(function () {
         // Flags
         Route::get('/flags', [ModerationController::class, 'index']);
         Route::get('/flags/{flag}', [ModerationController::class, 'show']);

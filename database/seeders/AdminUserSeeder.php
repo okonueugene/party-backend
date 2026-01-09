@@ -3,75 +3,90 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\AdminUser;
+use App\Models\User;
+use App\Enums\AdminRole; // Make sure this is imported
 use Illuminate\Support\Facades\Hash;
 
 class AdminUserSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $this->command->info('🔐 Seeding admin users...');
+        $this->command->info('👤 Creating admin users with roles...');
 
-        // Create default super admin
-        AdminUser::firstOrCreate(
+        // Super Admin
+        $superAdmin = User::firstOrCreate(
+            ['email' => 'superadmin@party.com'],
+            [
+                'phone_number' => '254700000000',
+                'name' => 'Super Admin',
+                'password' => Hash::make('admin123'),
+                'phone_verified_at' => now(),
+                'email_verified_at' => now(),
+            ]
+        );
+        $superAdmin->assignRole(AdminRole::SUPER_ADMIN);
+
+        // Regular Admin
+        $admin = User::firstOrCreate(
             ['email' => 'admin@party.com'],
             [
-                'name' => 'Super Administrator',
+                'phone_number' => '254700000001',
+                'name' => 'Admin User',
                 'password' => Hash::make('admin123'),
-                'role' => 'admin',
-                'is_active' => true,
+                'phone_verified_at' => now(),
+                'email_verified_at' => now(),
             ]
         );
+        $admin->assignRole(AdminRole::ADMIN);
 
-        // Create default moderator
-        AdminUser::firstOrCreate(
+        // Moderator
+        $moderator = User::firstOrCreate(
             ['email' => 'moderator@party.com'],
             [
-                'name' => 'Content Moderator',
+                'phone_number' => '254700000002',
+                'name' => 'Moderator User',
                 'password' => Hash::make('moderator123'),
-                'role' => 'moderator',
-                'is_active' => true,
+                'phone_verified_at' => now(),
+                'email_verified_at' => now(),
             ]
         );
+        $moderator->assignRole(AdminRole::MODERATOR);
 
-        // Create additional moderators
-        AdminUser::firstOrCreate(
-            ['email' => 'mod.siaya@party.com'],
+        // Content Manager
+        $contentManager = User::firstOrCreate(
+            ['email' => 'content@party.com'],
             [
-                'name' => 'Siaya County Moderator',
-                'password' => Hash::make('moderator123'),
-                'role' => 'moderator',
-                'is_active' => true,
+                'phone_number' => '254700000003',
+                'name' => 'Content Manager',
+                'password' => Hash::make('content123'),
+                'phone_verified_at' => now(),
+                'email_verified_at' => now(),
             ]
         );
+        $contentManager->assignRole(AdminRole::CONTENT_MANAGER);
 
-        AdminUser::firstOrCreate(
-            ['email' => 'mod.nakuru@party.com'],
+        // Analyst
+        $analyst = User::firstOrCreate(
+            ['email' => 'analyst@party.com'],
             [
-                'name' => 'Nakuru County Moderator',
-                'password' => Hash::make('moderator123'),
-                'role' => 'moderator',
-                'is_active' => true,
+                'phone_number' => '254700000004',
+                'name' => 'Analyst User',
+                'password' => Hash::make('analyst123'),
+                'phone_verified_at' => now(),
+                'email_verified_at' => now(),
             ]
         );
+        $analyst->assignRole(AdminRole::ANALYST);
 
-        //Run factory to create additional admin users
-        AdminUser::factory(10)->create();
-
-        $this->command->info('   ✓ Created ' . AdminUser::count() . ' admin users');
-        $this->command->newLine();
-        $this->command->warn('⚠️  Please change the default passwords in production!');
-        $this->command->newLine();
+        $this->command->info('✅ Admin users with roles created!');
         $this->command->table(
-            ['Email', 'Role', 'Password'],
+            ['Email', 'Password', 'Role', 'Permissions Count'],
             [
-                ['admin@party.com', 'admin', 'admin123'],
-                ['moderator@party.com', 'moderator', 'moderator123'],
-                ['mod.siaya@party.com', 'moderator', 'moderator123'],
-                ['mod.nakuru@party.com', 'moderator', 'moderator123'],
+                ['superadmin@party.com', 'admin123', 'Super Admin', count(AdminRole::SUPER_ADMIN->defaultPermissions())],
+                ['admin@party.com', 'admin123', 'Admin', count(AdminRole::ADMIN->defaultPermissions())],
+                ['moderator@party.com', 'moderator123', 'Moderator', count(AdminRole::MODERATOR->defaultPermissions())],
+                ['content@party.com', 'content123', 'Content Manager', count(AdminRole::CONTENT_MANAGER->defaultPermissions())],
+                ['analyst@party.com', 'analyst123', 'Analyst', count(AdminRole::ANALYST->defaultPermissions())],
             ]
         );
     }

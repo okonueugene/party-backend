@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('reason');
             $table->text('description')->nullable();
             $table->enum('status', ['pending', 'resolved', 'dismissed', 'escalated'])->default('pending');
-            $table->foreignId('reviewed_by')->nullable()->constrained('admin_users')->nullOnDelete();
+            $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('reviewed_at')->nullable();
             $table->timestamps();
             

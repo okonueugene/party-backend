@@ -153,8 +153,8 @@ class DashboardController extends Controller
                 ? round((($todayPosts - $yesterdayPosts) / $yesterdayPosts) * 100, 1)
                 : 0,
             'this_week' => Post::where('created_at', '>=', $lastWeek)->count(),
-            'with_images' => Post::whereNotNull('images')->count(),
-            'with_audio' => Post::whereNotNull('audio_path')->count(),
+            'with_images' => Post::whereNotNull('image')->count(),
+            'with_audio' => Post::whereNotNull('audio')->count(),
         ];
     }
 
@@ -231,25 +231,34 @@ class DashboardController extends Controller
                    ->toArray();
     }
 
-    private function getRecentFlags(int $limit = 10): array
+  private function getRecentFlags(int $limit = 10): array
     {
-        return Flag::with(['post.user', 'user'])
-                   ->where('status', 'pending')
-                   ->latest()
-                   ->limit($limit)
-                   ->get()
-                   ->map(function ($flag) {
-                       return [
-                           'id' => $flag->id,
-                           'reason' => $flag->reason,
-                           'post_id' => $flag->post_id,
-                           'post_content' => $flag->post?->content ? substr($flag->post->content, 0, 50) . '...' : null,
-                           'reported_by' => $flag->user?->name,
-                           'post_author' => $flag->post?->user?->name,
-                           'created_at' => $flag->created_at->toIso8601String(),
-                       ];
-                   })
-                   ->toArray();
+        // 1. Change 'post.user' to 'flaggable.user' to match the Model
+        return Flag::with(['flaggable.user', 'user'])
+                    ->where('status', 'pending')
+                    ->latest()
+                    ->limit($limit)
+                    ->get()
+                    ->map(function ($flag) {
+                        // Get the flagged item (Post, Comment, etc.)
+                        $item = $flag->flaggable;
+
+                        return [
+                            'id' => $flag->id,
+                            'reason' => $flag->reason,
+                            // 2. Change post_id to flaggable_id
+                            'post_id' => $flag->flaggable_id,
+                            // 3. Safely access content (checks if item exists first)
+                            'post_content' => $item && isset($item->content) 
+                                ? substr($item->content, 0, 50) . '...' 
+                                : 'Content unavailable',
+                            'reported_by' => $flag->user?->name,
+                            // 4. Access the author of the flagged item
+                            'post_author' => $item?->user?->name ?? 'Unknown',
+                            'created_at' => $flag->created_at->toIso8601String(),
+                        ];
+                    })
+                    ->toArray();
     }
 
     private function getUserGrowthData(string $period): array

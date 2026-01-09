@@ -69,7 +69,7 @@ class DatabaseSeeder extends Seeder
                 ['Counties', \App\Models\County::count()],
                 ['Constituencies', \App\Models\Constituency::count()],
                 ['Wards', \App\Models\Ward::count()],
-                ['Admin Users', \App\Models\AdminUser::count()],
+                ['Admin Users', \App\Models\User::where('is_admin', true)->count()],
                 ['Users', \App\Models\User::count()],
                 ['Posts', \App\Models\Post::count()],
                 ['Comments', \App\Models\Comment::count()],

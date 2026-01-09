@@ -7,7 +7,6 @@ use App\Models\Flag;
 use App\Models\Post;
 use App\Models\Comment;
 use App\Models\User;
-use App\Models\AdminUser;
 
 class FlagSeeder extends Seeder
 {
@@ -35,7 +34,7 @@ class FlagSeeder extends Seeder
         $posts = Post::all();
         $comments = Comment::all();
         $users = User::whereNotNull('phone_verified_at')->get();
-        $admins = AdminUser::all();
+        $admins = User::where('is_admin', true)->get();
 
         if ($users->isEmpty()) {
             $this->command->warn('   ⚠ No verified users found. Skipping flag creation.');

@@ -68,27 +68,35 @@ class AuthController extends Controller
         // Clear rate limiter on successful login
         RateLimiter::clear($key);
 
-        // Create token with admin abilities
-        $token = $admin->createToken('admin-token', ['admin'])->plainTextToken;
+        // Update last login
+    $admin->updateLastLogin();
 
-        // Log admin login
-        \Log::info('Admin login', [
-            'admin_id' => $admin->id,
+    // Create token with admin abilities
+    $token = $admin->createToken('admin-token', ['admin'])->plainTextToken;
+
+    // Log admin login
+    \Log::info('Admin login', [
+        'admin_id' => $admin->id,
+        'email' => $admin->email,
+        'role' => $admin->admin_role?->value,
+        'ip' => $request->ip(),
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Login successful',
+        'token' => $token,
+        'admin' => [
+            'id' => $admin->id,
+            'name' => $admin->name,
             'email' => $admin->email,
-            'ip' => $request->ip(),
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Login successful',
-            'token' => $token,
-            'admin' => [
-                'id' => $admin->id,
-                'name' => $admin->name,
-                'email' => $admin->email,
-                'phone_number' => $admin->phone_number,
-            ],
-        ], 200);
+            'phone_number' => $admin->phone_number,
+            'role' => $admin->admin_role?->value,
+            'role_label' => $admin->getRoleLabel(),
+            'permissions' => $admin->permissions,
+            'is_super_admin' => $admin->isSuperAdmin(),
+        ],
+    ], 200);
     }
 
     /**
